@@ -46,19 +46,25 @@ async def send_and_receive(message):
         
         # Send message to the group
         sent_message = await client.send_message(entity, message)
+        logging.info(f"Message sent to group: {sent_message.text}")
         
         # Wait for the bot's response
-        # Assuming the bot replies to the message, we fetch the reply
-        response = await client.get_messages(entity, limit=1, reply_to=sent_message.id)
+        # Fetch messages from the group and filter by reply_to_msg_id
+        response = await client.get_messages(entity, limit=10)
+        for msg in response:
+            if msg.reply_to and msg.reply_to.reply_to_msg_id == sent_message.id:
+                logging.info(f"Bot response: {msg.text}")
+                return msg.text
         
-        # Return the bot's response
-        return response[0].text if response else 'No response received'
+        logging.warning("No response received from the bot.")
+        return 'No response received'
         
     except Exception as e:
         logging.error(f"Error communicating with group: {e}", exc_info=True)
         return 'Error communicating with group'
     finally:
         await client.disconnect()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
