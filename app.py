@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from telethon import TelegramClient
+from telethon import TelegramClient, events
 import asyncio
 import logging
 
@@ -28,14 +28,14 @@ def process_card():
         # Use asyncio to run the Telethon coroutine
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        response = loop.run_until_complete(send_to_group(vbv_command))
+        response = loop.run_until_complete(send_and_receive(vbv_command))
 
         return jsonify({'response': response})
     except Exception as e:
         logging.error(f"Error processing card: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
 
-async def send_to_group(message):
+async def send_and_receive(message):
     try:
         # Start the client using the session file
         await client.start()
@@ -47,8 +47,12 @@ async def send_to_group(message):
         # Send message to the group
         sent_message = await client.send_message(entity, message)
         
-        # Return confirmation
-        return f'Message sent to group: {sent_message.text}'
+        # Wait for the bot's response
+        # Assuming the bot replies to the message, we fetch the reply
+        response = await client.get_messages(entity, limit=1, reply_to=sent_message.id)
+        
+        # Return the bot's response
+        return response[0].text if response else 'No response received'
         
     except Exception as e:
         logging.error(f"Error communicating with group: {e}", exc_info=True)
@@ -58,3 +62,4 @@ async def send_to_group(message):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
