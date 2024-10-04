@@ -11,6 +11,9 @@ api_hash = 'b35b715fe8dc0a58e8048988286fc5b6'
 # Initialize the Telethon client with the session file
 client = TelegramClient('my_session', api_id, api_hash)
 
+# Create a single event loop for the application
+loop = asyncio.get_event_loop()
+
 @app.route('/process_card', methods=['POST'])
 def process_card():
     try:
@@ -21,9 +24,7 @@ def process_card():
         # Process the card information
         vbv_command = f"/vbv {card_info}"
 
-        # Use asyncio to run the Telethon coroutine
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Use the single event loop to run the Telethon coroutine
         response = loop.run_until_complete(send_and_receive(vbv_command))
 
         return jsonify({'response': response})
@@ -48,7 +49,7 @@ async def send_and_receive(message):
         # Fetch messages from the group and filter by reply_to_msg_id
         response = await client.get_messages(entity, limit=10)
         for msg in response:
-            if msg.reply_to_msg_id == sent_message.id:
+            if msg.reply_to and msg.reply_to.reply_to_msg_id == sent_message.id:
                 return modify_response(msg.text)
         
         return 'No response received'
@@ -67,6 +68,7 @@ def modify_response(response_text):
         "Usuario": "[火]",
         "change_is_constant_x420": "𝐒𝐏𝐀𝐂𝐄",
         "FREE": " 𝐀𝐔𝐓𝐎𝐌𝐀𝐓𝐈𝐎𝐍"
+        "*": " "
     }
     
     for word, replacement in replacements.items():
