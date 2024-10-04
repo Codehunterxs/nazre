@@ -1,12 +1,8 @@
 from flask import Flask, request, jsonify
-from telethon import TelegramClient, events
+from telethon import TelegramClient
 import asyncio
-import logging
 
 app = Flask(__name__)
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 
 # Telegram API credentials
 api_id = '25742938'
@@ -32,8 +28,7 @@ def process_card():
 
         return jsonify({'response': response})
     except Exception as e:
-        logging.error(f"Error processing card: {e}", exc_info=True)
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': f'Internal server error: {e}'}), 500
 
 async def send_and_receive(message):
     try:
@@ -46,25 +41,38 @@ async def send_and_receive(message):
         
         # Send message to the group
         sent_message = await client.send_message(entity, message)
-        logging.info(f"Message sent to group: {sent_message.text}")
         
-        # Wait for the bot's response
+        # Wait for a few seconds to allow the bot to reply
+        await asyncio.sleep(5)  # Adjust the delay as needed
+        
         # Fetch messages from the group and filter by reply_to_msg_id
         response = await client.get_messages(entity, limit=10)
         for msg in response:
-            if msg.reply_to and msg.reply_to.reply_to_msg_id == sent_message.id:
-                logging.info(f"Bot response: {msg.text}")
-                return msg.text
+            if msg.reply_to_msg_id == sent_message.id:
+                return modify_response(msg.text)
         
-        logging.warning("No response received from the bot.")
         return 'No response received'
         
     except Exception as e:
-        logging.error(f"Error communicating with group: {e}", exc_info=True)
-        return 'Error communicating with group'
+        return f'Error communicating with group: {e}'
     finally:
         await client.disconnect()
 
+def modify_response(response_text):
+    # Replace specific words in the response
+    replacements = {
+        "Datos": "[火]  𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐃",
+        "Gracias": "𝐁𝐘",
+        "Braintree": "@xunez",
+        "Usuario": "[火]",
+        "change_is_constant_x420": "𝐒𝐏𝐀𝐂𝐄",
+        "FREE": " 𝐀𝐔𝐓𝐎𝐌𝐀𝐓𝐈𝐎𝐍"
+    }
+    
+    for word, replacement in replacements.items():
+        response_text = response_text.replace(word, replacement)
+    
+    return response_text
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
