@@ -68,7 +68,6 @@ def modify_response(response_text):
         "Usuario": "[火]",
         "change_is_constant_x420": "𝐒𝐏𝐀𝐂𝐄",
         "FREE": " 𝐀𝐔𝐓𝐎𝐌𝐀𝐓𝐈𝐎𝐍"
-        "*": " "
     }
     
     for word, replacement in replacements.items():
