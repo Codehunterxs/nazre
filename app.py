@@ -56,7 +56,7 @@ async def send_and_receive(message):
         return 'No response received'
         
     except Exception as e:
-        return f'Error communicating with group: {e}'
+        return f'Error communicating with Your Mom: {e}'
     finally:
         await client.disconnect()
 
@@ -70,9 +70,10 @@ def modify_response(response_text):
     status = status_match.group(1) if status_match else "N/A"
     response = info_match.group(1) if info_match else "N/A"
 
-    # Format the response
+    # Format the response in a single line
     formatted_response = (
-        "Developed By : @xunez 🥇| Status : {status} | Response : {response} | Chanel : @b3charge 🥇 "
+        f"Developed By : @xunez 🥇| Status : {status} |  "
+        f"Response : {response} | Chanel : @b3charge 🥇"
     )
 
     return formatted_response
