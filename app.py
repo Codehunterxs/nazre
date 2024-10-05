@@ -72,10 +72,7 @@ def modify_response(response_text):
 
     # Format the response
     formatted_response = (
-        f"Developed By : @xunez 🥇\n"
-        f"Status : {status} Bin : {bin_number}\n"
-        f"Response : {response}\n"
-        f"Chanel : @b3charge 🥇"
+        "Developed By : @xunez 🥇| Status : {status} | Response : {response} | Chanel : @b3charge 🥇 "
     )
 
     return formatted_response
