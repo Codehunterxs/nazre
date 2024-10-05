@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from telethon import TelegramClient
 import asyncio
+import re
 
 app = Flask(__name__)
 
@@ -60,20 +61,24 @@ async def send_and_receive(message):
         await client.disconnect()
 
 def modify_response(response_text):
-    # Replace specific words in the response
-    replacements = {
-        "Datos": "[火]  𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐃",
-        "Gracias": "𝐁𝐘",
-        "Braintree": "@xunez",
-        "Usuario": "[火]",
-        "change_is_constant_x420": "𝐒𝐏𝐀𝐂𝐄",
-        "FREE": " 𝐀𝐔𝐓𝐎𝐌𝐀𝐓𝐈𝐎𝐍"
-    }
-    
-    for word, replacement in replacements.items():
-        response_text = response_text.replace(word, replacement)
-    
-    return response_text
+    # Extract information using regular expressions
+    bin_match = re.search(r'Bin\s+(\d+)', response_text)
+    status_match = re.search(r'Estatus\s+(.+)', response_text)
+    info_match = re.search(r'Info\s+(.+)', response_text)
+
+    bin_number = bin_match.group(1) if bin_match else "N/A"
+    status = status_match.group(1) if status_match else "N/A"
+    response = info_match.group(1) if info_match else "N/A"
+
+    # Format the response
+    formatted_response = (
+        f"Developed By : @xunez 🥇\n"
+        f"Status : {status} Bin : {bin_number}\n"
+        f"Response : {response}\n"
+        f"Chanel : @b3charge 🥇"
+    )
+
+    return formatted_response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
