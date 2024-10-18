@@ -15,9 +15,9 @@ proxy = {
     "https": "http://ugazuzfh-rotate:g5im737zry2x@p.webshare.io:80"
 }
 
-# Function to extract details from card info
-def pregs(list_input):
-    arrays = re.findall(r'[0-9]+', list_input)
+# Function to extract card details
+def pregs(card_info):
+    arrays = re.findall(r'[0-9]+', card_info)
     return arrays
 
 # Function to generate random email
@@ -33,20 +33,18 @@ def generate_random_password():
     password = ''.join(random.choice(characters) for i in range(12))
     return password
 
-# Route to process the request
 @app.route('/process_card', methods=['POST'])
 def process_card():
     data = request.json
     card_info = data.get('card')
-
-    # Extracting card details
+    
+    # Extract card details
     arrs = pregs(card_info)
     cc = arrs[0]
     month = arrs[1]
     year = arrs[2]
     cvc = arrs[3]
 
-    # Setting up the session
     session = requests.Session()
     session.proxies = proxy
 
@@ -71,7 +69,7 @@ def process_card():
         "operationName": "Signup"
     })
 
-    headers = {
+    headers_signup = {
         'authority': 'gateway.chegg.com',
         'accept': 'application/json',
         'content-type': 'application/json',
@@ -81,37 +79,30 @@ def process_card():
     }
 
     # Make the POST request to sign up
-    response_signup = session.post(url_signup, headers=headers, data=payload_signup)
+    response_signup = session.post(url_signup, headers=headers_signup, data=payload_signup)
 
-    # Check if signup was successful
     if response_signup.status_code == 200:
         # Now navigate to the payments page (simulated)
         url_payments = "https://www.chegg.com/my/payments"
-        session.get(url_payments, headers=headers)
+        session.get(url_payments, headers=headers_signup)
 
         # Wait for the specific request to the GraphQL endpoint
         url_graphql = "https://gateway.chegg.com/me-web-bff/graphql"
-        session.get(url_graphql, headers=headers)
+        session.get(url_graphql, headers=headers_signup)
 
         # Fetch and format cookies from the response
         cookies = session.cookies
         cookies_value = '; '.join([f"{cookie.name}={cookie.value}" for cookie in cookies])
 
-        # Prepare the response
-        response_data = {
-            "cookies": cookies_value
-        }
-
-        # Now continue to the tokenization process
+        # Tokenization process
         url_tokenize = "https://payments.braintree-api.com/graphql"
-
         payload_tokenize = json.dumps({
             "clientSdkMetadata": {
                 "source": "client",
                 "integration": "custom",
                 "sessionId": "e67551a3-cb40-47a7-a878-f9bd68d4716d"
             },
-            "query": "mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { token creditCard { bin brandCode last4 cardholderName expirationMonth expirationYear binData { prepaid healthcare debit durbinRegulated commercial payroll issuingBank countryOfIssuance productId } } } }",
+            "query": "mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) {   tokenizeCreditCard(input: $input) {     token     creditCard {       bin       brandCode       last4       cardholderName       expirationMonth      expirationYear      binData {         prepaid         healthcare         debit         durbinRegulated         commercial         payroll         issuingBank         countryOfIssuance         productId       }     }   } }",
             "variables": {
                 "input": {
                     "creditCard": {
@@ -147,15 +138,16 @@ def process_card():
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
         }
 
-        # Send the tokenization request
         response_tokenize = session.post(url_tokenize, headers=headers_tokenize, data=payload_tokenize)
         response_json = response_tokenize.json()
 
         # Fetch the token
         tokenID = response_json['data']['tokenizeCreditCard']['token']
-        response_data["token"] = tokenID
 
-        return jsonify(response_data)
+        return jsonify({
+            "cookies": cookies_value,
+            "token": tokenID
+        })
     else:
         return jsonify({"error": "Signup failed"}), 400
 
