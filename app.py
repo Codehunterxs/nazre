@@ -10,10 +10,7 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 # Proxy setup
-proxy = {
-    "http": "http://ugazuzfh-rotate:g5im737zry2x@p.webshare.io:80",
-    "https": "http://ugazuzfh-rotate:g5im737zry2x@p.webshare.io:80"
-}
+
 
 # Function to extract card details
 def pregs(card_info):
@@ -46,7 +43,6 @@ def process_card():
     cvc = arrs[3]
 
     session = requests.Session()
-    session.proxies = proxy
 
     # Signup process
     url_signup = "https://gateway.chegg.com/auth-gate/"
