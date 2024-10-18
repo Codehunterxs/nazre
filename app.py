@@ -78,6 +78,14 @@ def process_card():
     response_signup = session.post(url_signup, headers=headers_signup, data=payload_signup)
 
     if response_signup.status_code == 200:
+        # Success: proceed with the rest of the logic
+        ...
+    else:
+        # Log the full response body for debugging
+        print("Signup failed with status code:", response_signup.status_code)
+        print("Response text:", response_signup.text)
+        return {"error": "Signup failed", "details": response_signup.text}
+    if response_signup.status_code == 200:
         # Now navigate to the payments page (simulated)
         url_payments = "https://www.chegg.com/my/payments"
         session.get(url_payments, headers=headers_signup)
